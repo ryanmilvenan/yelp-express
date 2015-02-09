@@ -3,6 +3,9 @@ var restaurants = require('./data/restaurants.json')
 var users = require('./data/users.json')
 var tips = require('./data/tips.json')
 
+var _ = require('lodash')
+var util = require('util')
+
 module.exports = function(app) {
 
     app.get('/search', function(req, res) {
@@ -12,46 +15,75 @@ module.exports = function(app) {
     app.get('/search/restaurants/name/has/:keyword', function(req, res) {
         var keyword = req.params.keyword
 
+        var rs = _.filter(restaurants, function(restaurant) {
+            var words = _.words(restaurant.name)
+            return _.includes(words, keyword)
+        })  
 
-        // TODO: lookup restaurants whose names contain the given keyword
-        var rs = [restaurants[6], restaurants[10]] // hardcoded for 'Pizza'
-
-        res.render('listRestaurants.jade', {
-            restaurants: rs
-        })
+        if(rs.length > 0) {
+            res.render('listRestaurants.jade', {
+                restaurants: rs
+            })
+        } else {
+            res.render('noResults.jade')
+        }
     })
 
     app.get('/search/restaurants/good/for/:x', function(req, res) {
         var x = req.params.x
 
-        // TODO: lookup restaurants good for  :x
-        var rs = [restaurants[1], restaurants[2], restaurants[3]] // hardcoded fake results
+        var rs = _.filter(restaurants, function(restaurant) {
+            var goodFor = restaurant.attributes['Good For']
+            if(goodFor) {
+                return goodFor[x]
+            } else
+                return false
+        }) 
 
-        res.render('listRestaurants.jade', {
-            restaurants: rs
-        })
+        if(rs.length > 0) {
+            res.render('listRestaurants.jade', {
+                restaurants: rs
+            })
+        } else {
+            res.render('noResults.jade')
+        }
     })
 
     app.get('/search/restaurants/ambience/is/:x', function(req, res) {
         var x = req.params.x
 
-        // TODO: lookup restaurants has ambience of :x
-        var rs = [restaurants[1], restaurants[2], restaurants[3]] // hardcoded fake results
-
-        res.render('listRestaurants.jade', {
-            restaurants: rs
+        var rs = _.filter(restaurants, function(restaurant) {
+            var ambience = restaurant.attributes.Ambience
+            if(ambience){
+                return ambience[x]
+            } else 
+                return false
         })
+
+        if(rs.length > 0) {
+            res.render('listRestaurants.jade', {
+                restaurants: rs
+            })
+        } else {
+            res.render('noResults.jade')
+        }
     })    
 
     app.get('/search/restaurants/category/is/:x', function(req, res) {
         var x = req.params.x
 
-        // TODO: lookup restaurants belonging to category :x
-        var rs = [restaurants[1], restaurants[2], restaurants[3]] // hardcoded fake results
+        var rs = _.filter(restaurants, function(restaurant) {
+            var categories = restaurant.categories
+            return _.includes(categories, x)
+        }) 
 
-        res.render('listRestaurants.jade', {
-            restaurants: rs
-        })
+        if(rs.length > 0) {
+            res.render('listRestaurants.jade', {
+                restaurants: rs
+            })
+        } else {
+            res.render('noResults.jade')
+        }
     })    
 
 
@@ -59,12 +91,24 @@ module.exports = function(app) {
         var number = req.params.number
         var relationship = req.params.relationship
 
-        // TODO: lookup restaurants with starts higher or lower than :number
-        var rs = [restaurants[1], restaurants[2], restaurants[3]] // hardcoded fake results
-
-        res.render('listRestaurants.jade', {
-            restaurants: rs
+        var rs = _.filter(restaurants, function(restaurant) {
+            var stars = restaurant.stars
+            if(stars) {
+                if(relationship == 'above') {
+                    return stars >= number
+                } else {
+                    return stars <= number
+                }
+            }
         })
+
+        if(rs.length > 0) {
+            res.render('listRestaurants.jade', {
+                restaurants: rs
+            })
+        } else {
+            res.render('noResults.jade')
+        }
     })
 
     app.get('/search/restaurants/q', function(req, res) {
@@ -77,11 +121,49 @@ module.exports = function(app) {
         console.log('req.query: ', req.query)    
         
         // // TODO: lookup restaurants with the given query parameters
-        var rs = [restaurants[1], restaurants[2], restaurants[3]] // hardcoded fake results
+        
+        var rs = restaurants
 
-        res.render('listRestaurants.jade', {
-            restaurants: rs
-        })
+        if(name) {
+            rs = _.filter(rs, function(restaurant) {
+                var words = _.words(restaurant.name)
+                return _.includes(words, name)
+            })
+        }
+
+        if(minStars) {
+            rs = _.filter(rs, function(restaurant) {
+                var stars = restaurant.stars
+                if(stars) {
+                    return stars >= minStars
+                }
+            })
+        }
+
+        if(category) {
+            rs = _.filter(rs, function(restaurant) {
+                var categories = restaurant.categories
+                return _.includes(categories, category)
+            }) 
+        }
+
+        if(ambience) {
+            rs = _.filter(rs, function(restaurant) {
+                var Ambience = restaurant.attributes.Ambience
+                if(Ambience){
+                    return Ambience[ambience]
+                } else 
+                    return false
+            })
+        }
+
+        if(rs.length > 0) {
+            res.render('listRestaurants.jade', {
+                restaurants: rs
+            })
+        } else {
+            res.render('noResults.jade')
+        }
     })    
 
 }
